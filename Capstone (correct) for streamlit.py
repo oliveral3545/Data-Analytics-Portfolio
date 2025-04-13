@@ -190,8 +190,8 @@ def main():
     if st.button("Predict BTC Price"):
     prediction = make_prediction(model, feature_values)
     
-    if prediction is not None:
-        st.success(f'Estimated BTC price: ${prediction:,.2f}')
+        if prediction is not None:
+            st.success(f'Estimated BTC price: ${prediction:,.2f}')
                   
     
     # Add a correlation matrix for selected features
