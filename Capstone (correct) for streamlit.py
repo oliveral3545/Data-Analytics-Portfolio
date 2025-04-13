@@ -170,30 +170,29 @@ def main():
     
     # Create input sliders for each feature
     feature_values = []
-    
+
     for feature in selected_features:
         min_val = float(clean_df[feature].min())
         max_val = float(clean_df[feature].max())
         current_val = float(clean_df[feature].median())
-        
-        feature_val = st.slider(
-            f'{feature}',
-            min_value=min_val,
-            max_value=max_val,
-            value=current_val,
-            step=(max_val - min_val) / 100,
-            key=f"slider_{feature}"
-        )
-        
-        feature_values.append(feature_val)
     
+    feature_val = st.slider(
+        f'{feature}',
+        min_value=min_val,
+        max_value=max_val,
+        value=current_val,
+        step=(max_val - min_val) / 100,
+        key=f"slider_{feature}"
+    )
+    feature_values.append(feature_val)
+
+    # Predict button
     if st.button("Predict BTC Price"):
-    prediction = make_prediction(model, feature_values)
+        prediction = make_prediction(model, feature_values)
     
         if prediction is not None:
             st.success(f'Estimated BTC price: ${prediction:,.2f}')
-                  
-    
+                
     # Add a correlation matrix for selected features
     if len(selected_features) > 1:
         st.subheader("Feature Correlation Matrix")
