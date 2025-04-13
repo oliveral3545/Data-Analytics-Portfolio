@@ -184,7 +184,7 @@ def main():
         step=(max_val - min_val) / 100,
         key=f"slider_{feature}"
     )
-    feature_values.append(feature_val)
+        feature_values.append(feature_val)
 
     # Predict button
     if st.button("Predict BTC Price"):
