@@ -118,6 +118,15 @@ def main():
         'US_inflation',
         'US_M2_money_supply_in_billions'
     ]
+
+    # Verify which features are available in the dataset
+    available_features = [feat for feat in macro_features if feat in btc_macro_df.columns]
+    
+    if not available_features:
+        st.error("None of the required macro features are in the dataset.")
+        # Show available columns
+        st.write("Available columns:", ", ".join(btc_macro_df.columns.tolist()))
+        return
     
     
     # Sidebar for model configuration
