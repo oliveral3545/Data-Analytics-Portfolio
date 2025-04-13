@@ -76,13 +76,13 @@ def preprocess_data(df, feature_cols, target_col='btc_price_usd'):
     
     return X, y, df_clean
 
-# Function to train the model
+# Function to train the model and calculate RMSE
 def train_model(df, feature_cols):
     # Preprocess data
     X, y, df_clean = preprocess_data(df, feature_cols)
     
     if X is None or y is None:
-        return None, None, None
+        return None, None, None, None
     
     try:
         # Train model
@@ -92,10 +92,14 @@ def train_model(df, feature_cols):
         # Calculate R-squared
         r_squared = model.score(X, y)
         
-        return model, r_squared, df_clean
+        # Calculate RMSE (Root Mean Square Error)
+        y_pred = model.predict(X)
+        rmse = np.sqrt(np.mean((y - y_pred) ** 2))
+        
+        return model, r_squared, rmse, df_clean
     except Exception as e:
         st.error(f"Error during model training: {e}")
-        return None, None, None
+        return None, None, None, None
 
 # Function to make a prediction with multiple features
 def make_prediction(model, feature_values):
@@ -158,18 +162,13 @@ def main():
         st.error("Please select at least one feature for prediction.")
         return
     
-    # Display data overview
-    with st.expander("View Data Overview"):
-        st.dataframe(btc_macro_df[selected_features + ['btc_price_usd']].describe())
-        
-        # Display data statistics
-        st.write(f"Total data points: {len(btc_macro_df)}")
-        missing_values = btc_macro_df[selected_features + ['btc_price_usd']].isna().sum()
-        for feature in selected_features + ['btc_price_usd']:
-            st.write(f"Missing values in {feature}: {missing_values[feature]}")
+    # Display basic data statistics without expandable section
+    st.text(f"Total data points: {len(btc_macro_df)}")
+    missing_values = btc_macro_df[selected_features + ['btc_price_usd']].isna().sum().sum()
+    st.text(f"Total missing values: {missing_values}")
     
     # Train model with selected features
-    model, r_squared, clean_df = train_model(btc_macro_df, selected_features)
+    model, r_squared, rmse, clean_df = train_model(btc_macro_df, selected_features)
     
     if model is None or clean_df is None or clean_df.empty:
         st.error("Could not train model. Please check your data.")
@@ -178,6 +177,7 @@ def main():
     # Display model info
     st.subheader("Model Information")
     st.write(f"Model R-squared: {r_squared:.4f}")
+    st.write(f"RMSE (Root Mean Square Error): ${rmse:,.2f}")
     
     coef_df = pd.DataFrame({
         'Feature': selected_features,
@@ -218,6 +218,11 @@ def main():
             # Show result
             st.success(f'Estimated BTC price: ${prediction:,.2f}')
             
+            # Display prediction uncertainty based on RMSE
+            lower_bound = prediction - rmse
+            upper_bound = prediction + rmse
+            st.info(f"Prediction range (based on RMSE): ${lower_bound:,.2f} to ${upper_bound:,.2f}")
+            
             # Display feature importance (simple version - just use absolute coefficients)
             importance = np.abs(model.coef_)
             importance_normalized = importance / np.sum(importance)
@@ -255,4 +260,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-      
