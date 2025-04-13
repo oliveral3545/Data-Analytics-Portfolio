@@ -16,21 +16,31 @@ def load_data():
         # Attempt to read the CSV file
         df = pd.read_csv('btc_macroeconomic.csv')
         
-        # Clean up the data
-        df = df.replace('No data', np.nan)
+        # Clean up the data - convert all non-numeric values to NaN
+        df = df.replace(['No data', 'No', 'NaN', 'nan', 'NULL', 'null', ''], np.nan)
         
         # Convert date to datetime if it exists
         if 'date' in df.columns:
-            df['date'] = pd.to_datetime(df['date'], format='%d/%m/%Y')
+            df['date'] = pd.to_datetime(df['date'], format='%d/%m/%Y', errors='coerce')
             
-        # Drop rows with NaN values in the features we need
-        feature_cols = ['gold_price_usd', 'SP500', 'fed_funds_rate', 'US_inflation', 'US_M2_money_supply_in_billions']
-        df_clean = df.dropna(subset=feature_cols + ['btc_price_usd'])
+        # Ensure all numeric columns are properly converted to float
+        feature_cols = ['gold_price_usd', 'SP500', 'fed_funds_rate', 'US_inflation', 'US_M2_money_supply_in_billions', 'btc_price_usd']
+        for col in feature_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
         
-        st.success("Successfully loaded real BTC macro data!")
-        return df_clean
+        # Drop rows with NaN values in the features we need
+        df_clean = df.dropna(subset=feature_cols)
+        
+        if len(df_clean) > 0:
+            st.success(f"Successfully loaded real BTC macro data with {len(df_clean)} complete rows!")
+            return df_clean
+        else:
+            st.warning("No complete rows found in the CSV after cleaning. Using synthetic data instead.")
+            return generate_synthetic_data()
+            
     except Exception as e:
-        st.warning(f"Could not load CSV file: {e}. Using synthetic data instead.")
+        st.warning(f"Could not load CSV file properly: {e}. Using synthetic data instead.")
         # Fall back to synthetic data if loading fails
         return generate_synthetic_data()
 
@@ -219,29 +229,7 @@ def main():
             fig_imp = px.bar(imp_df, x='Feature', y='Importance',
                          title='Importance of Macro Factors for BTC Price')
             st.plotly_chart(fig_imp)
-        
-        # Compare your inputs to historical data
-        input_df = pd.DataFrame({
-            'Gold Price': [gold_price],
-            'S&P 500': [sp500],
-            'Fed Funds Rate': [fed_rate],
-            'M2 Supply': [m2_supply],
-            'Inflation': [inflation]
-        })
-        
-        # Show where the inputs fall within historical ranges
-        st.subheader('Your Inputs vs Historical Ranges')
-        for feature, value in zip(feature_names, input_features[0]):
-            col_name = feature_cols[feature_names.index(feature)]
-            hist_min = df[col_name].min()
-            hist_max = df[col_name].max()
-            hist_mean = df[col_name].mean()
             
-            # Calculate percentile of input
-            percentile = (value - hist_min) / (hist_max - hist_min) * 100 if hist_max > hist_min else 50
-            
-            st.write(f"**{feature}**: Your input of {value:.2f} is at the {percentile:.1f}th percentile of historical data.")
-        
         # Create scatter plot of actual vs predicted BTC prices
         X_scaled = scaler.transform(df[feature_cols])
         df['predicted_price'] = model.predict(X_scaled)
