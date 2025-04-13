@@ -18,14 +18,13 @@ import plotly.express as px
 
 
 btc_macro_df = pd.read_csv('btc_macroeconomic.csv')
-print(btc_macro_df.shape)
-btc_macro_df.head()
+
 
 
 # In[15]:
 
 
-btc_macro_df.describe(include='all')
+
 
 
 # In[3]:
