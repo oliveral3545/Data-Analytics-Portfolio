@@ -189,29 +189,16 @@ def main():
     # Predict button
     if st.button("Predict BTC Price"):
         prediction = make_prediction(model, feature_values)
-        
-        if prediction is not None:
-            # Show result without prediction range
-            st.success(f'Estimated BTC price: ${prediction:,.2f}')
-            
-            # Display feature importance (simple version - just use absolute coefficients)
-            importance = np.abs(model.coef_)
-            importance_normalized = importance / np.sum(importance)
-            
-            importance_df = pd.DataFrame({
-                'Feature': selected_features,
-                'Importance': importance_normalized
-            }).sort_values('Importance', ascending=False)
-            
+                  
     
     # Add a correlation matrix for selected features
     if len(selected_features) > 1:
         st.subheader("Feature Correlation Matrix")
-        corr_matrix = clean_df[selected_features + ['btc_price_usd']].corr().round(2)  # Round to 2 decimal places
+        corr_matrix = clean_df[selected_features + ['btc_price_usd']].corr().round(2) 
         
         fig_corr = px.imshow(
             corr_matrix,
-            text_auto='.2f',  # Format to always show 2 decimal places
+            text_auto='.2f',  
             aspect="auto",
             title="Correlation Matrix",
             color_continuous_scale='RdBu_r'
