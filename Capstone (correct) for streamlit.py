@@ -87,8 +87,8 @@ from sklearn.linear_model import LinearRegression
 # Function to generate sample data
 def generate_data():
     np.random.seed(42)
-    gold_prices = np.random.uniform(1000, 2500, 100)
-    btc_prices = 10000 + 15 * gold_prices + np.random.normal(0, 2000, 100)
+    gold_prices = np.random.uniform(0, 3000, 100)
+    btc_prices = 10000 + 15 * gold_prices + np.random.normal(0, 3000, 100)
     return pd.DataFrame({
         'gold_price_usd': gold_prices,
         'btc_price_usd': btc_prices
@@ -135,6 +135,7 @@ def main():
                 x=[gold_price], 
                 y=[prediction[0]], 
                 mode='markers',
+                 trendline="ols",
                 marker=dict(size=15, color='red'),
                 name='Prediction'
             )
