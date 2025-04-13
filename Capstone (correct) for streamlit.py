@@ -27,14 +27,20 @@ def load_data():
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
         
-        # Drop rows with NaN values in the features we need
-        df_clean = df.dropna(subset=feature_cols)
+        # Count rows with NaN values
+        total_rows = len(df)
+        feature_cols = ['gold_price_usd', 'SP500', 'fed_funds_rate', 'US_inflation', 'US_M2_money_supply_in_billions']
+        X = df[feature_cols]
+        na_rows = X.isna().any(axis=1).sum()
         
-        if len(df_clean) > 0:
-            st.success(f"Successfully loaded real BTC macro data with {len(df_clean)} complete rows!")
-            return df_clean
+        st.write(f"Total rows in dataset: {total_rows}")
+        st.write(f"Rows with at least one NaN: {na_rows} ({na_rows/total_rows:.2%})")
+        
+        if total_rows > 0:
+            st.success(f"Successfully loaded real BTC macro data!")
+            return df
         else:
-            st.warning("No complete rows found in the CSV after cleaning. Using synthetic data instead.")
+            st.warning("No data found in the CSV. Using synthetic data instead.")
             return generate_synthetic_data()
             
     except Exception as e:
@@ -72,32 +78,43 @@ def generate_synthetic_data():
         'btc_price_usd': btc_prices
     })
 
-# Function to train model without scaling
+# Function to train model with proper NaN handling
 def train_model():
     df = load_data()
     
-    # Check for outliers in BTC price
-    q1 = df['btc_price_usd'].quantile(0.25)
-    q3 = df['btc_price_usd'].quantile(0.75)
-    iqr = q3 - q1
-    
-    # Filter out extreme outliers
-    df_filtered = df[
-        (df['btc_price_usd'] >= q1 - 1.5 * iqr) & 
-        (df['btc_price_usd'] <= q3 + 1.5 * iqr)
-    ]
-    
-    if len(df_filtered) < len(df):
-        st.info(f"Removed {len(df) - len(df_filtered)} outliers from the dataset.")
-        df = df_filtered
-    
-    # Make sure column names match those in your CSV
+    # Define feature columns
     feature_cols = ['gold_price_usd', 'SP500', 'fed_funds_rate', 'US_inflation', 'US_M2_money_supply_in_billions']
     X = df[feature_cols]
     y = df['btc_price_usd']
     
+    # Handle missing values exactly as in your code
+    mask = ~X.isna().any(axis=1)
+    X_clean = X[mask]
+    y_clean = y[mask]
+    
+    st.write(f"Rows after dropping NaNs: {len(X_clean)}")
+    
+    if len(X_clean) < 10:
+        st.warning("Not enough clean data rows for reliable modeling. Using synthetic data instead.")
+        df = generate_synthetic_data()
+        X_clean = df[feature_cols]
+        y_clean = df['btc_price_usd']
+    
+    # Check for outliers in BTC price
+    q1 = y_clean.quantile(0.25)
+    q3 = y_clean.quantile(0.75)
+    iqr = q3 - q1
+    
+    # Filter out extreme outliers
+    outlier_mask = (y_clean >= q1 - 1.5 * iqr) & (y_clean <= q3 + 1.5 * iqr)
+    X_filtered = X_clean[outlier_mask]
+    y_filtered = y_clean[outlier_mask]
+    
+    if len(X_filtered) < len(X_clean):
+        st.info(f"Removed {len(X_clean) - len(X_filtered)} outliers from the dataset.")
+    
     # Split data for evaluation
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X_filtered, y_filtered, test_size=0.2, random_state=123)
     
     # Train linear regression model
     model = LinearRegression()
@@ -108,33 +125,33 @@ def train_model():
     rmse = math.sqrt(mean_squared_error(y_test, y_pred))
     r2 = r2_score(y_test, y_pred)
     
-    return model, df, feature_cols, rmse, r2
+    return model, df[mask], feature_cols, rmse, r2
 
 def main():
     st.title('BTC Price Predictor Against Macro Conditions')
     st.write("Macroeconomics affect BTC's price")
     
     # Train model with all features
-    model, df, feature_cols, rmse, r2 = train_model()
+    model, df_clean, feature_cols, rmse, r2 = train_model()
     
     # Show model performance
     st.info(f"Model performance: RMSE = ${rmse:.2f}, R² = {r2:.3f}")
     
     # Show data summary
     with st.expander("View Data Summary"):
-        st.write("Number of data points:", len(df))
-        st.write("BTC Price Range:", f"${df['btc_price_usd'].min():,.2f} to ${df['btc_price_usd'].max():,.2f}")
-        st.dataframe(df.describe())
+        st.write("Number of clean data points:", len(df_clean))
+        st.write("BTC Price Range:", f"${df_clean['btc_price_usd'].min():,.2f} to ${df_clean['btc_price_usd'].max():,.2f}")
+        st.dataframe(df_clean.describe())
     
     # Create two columns for inputs
     col1, col2 = st.columns(2)
     
     # Get min and max values from the actual data for input ranges
-    gold_min, gold_max = float(df['gold_price_usd'].min()), float(df['gold_price_usd'].max())
-    sp500_min, sp500_max = float(df['SP500'].min()), float(df['SP500'].max())
-    fed_min, fed_max = float(df['fed_funds_rate'].min()), float(df['fed_funds_rate'].max())
-    m2_min, m2_max = float(df['US_M2_money_supply_in_billions'].min()), float(df['US_M2_money_supply_in_billions'].max())
-    infl_min, infl_max = float(df['US_inflation'].min()), float(df['US_inflation'].max())
+    gold_min, gold_max = float(df_clean['gold_price_usd'].min()), float(df_clean['gold_price_usd'].max())
+    sp500_min, sp500_max = float(df_clean['SP500'].min()), float(df_clean['SP500'].max())
+    fed_min, fed_max = float(df_clean['fed_funds_rate'].min()), float(df_clean['fed_funds_rate'].max())
+    m2_min, m2_max = float(df_clean['US_M2_money_supply_in_billions'].min()), float(df_clean['US_M2_money_supply_in_billions'].max())
+    infl_min, infl_max = float(df_clean['US_inflation'].min()), float(df_clean['US_inflation'].max())
     
     # User inputs
     with col1:
@@ -167,15 +184,15 @@ def main():
                                    step=0.1)
     
     if st.button('Predict BTC Price'):
-        # Create input array with all features (unscaled)
+        # Create input array with all features
         input_features = [[gold_price, sp500, fed_rate, m2_supply, inflation]]
         
         # Perform prediction
         prediction = model.predict(input_features)[0]
         
         # Constrain prediction to be within a reasonable range of historical values
-        min_btc = df['btc_price_usd'].min()
-        max_btc = df['btc_price_usd'].max()
+        min_btc = df_clean['btc_price_usd'].min()
+        max_btc = df_clean['btc_price_usd'].max()
         
         if prediction < min_btc * 0.5:
             st.warning(f"Raw prediction (${prediction:.2f}) was below historical minimum. Adjusting to a reasonable value.")
@@ -203,9 +220,9 @@ def main():
         st.plotly_chart(fig_coef)
             
         # Create scatter plot of actual vs predicted BTC prices
-        df['predicted_price'] = model.predict(df[feature_cols])
+        df_clean['predicted_price'] = model.predict(df_clean[feature_cols])
         
-        fig = px.scatter(df, x='btc_price_usd', y='predicted_price',
+        fig = px.scatter(df_clean, x='btc_price_usd', y='predicted_price',
                       title='Actual vs Predicted BTC Prices',
                       labels={
                           'btc_price_usd': 'Actual BTC Price',
@@ -213,8 +230,8 @@ def main():
                       })
         
         # Add diagonal line for perfect predictions
-        max_val = max(df['btc_price_usd'].max(), df['predicted_price'].max())
-        min_val = min(df['btc_price_usd'].min(), df['predicted_price'].min())
+        max_val = max(df_clean['btc_price_usd'].max(), df_clean['predicted_price'].max())
+        min_val = min(df_clean['btc_price_usd'].min(), df_clean['predicted_price'].min())
         fig.add_trace(
             go.Scatter(
                 x=[min_val, max_val],
@@ -239,9 +256,9 @@ def main():
         st.plotly_chart(fig)
         
         # Add time series chart if date column exists
-        if 'date' in df.columns:
+        if 'date' in df_clean.columns:
             st.subheader('BTC Price Over Time')
-            time_fig = px.line(df.sort_values('date'), x='date', y=['btc_price_usd', 'predicted_price'],
+            time_fig = px.line(df_clean.sort_values('date'), x='date', y=['btc_price_usd', 'predicted_price'],
                            title='Bitcoin Price: Actual vs Model Predictions',
                            labels={
                                'value': 'Price (USD)',
