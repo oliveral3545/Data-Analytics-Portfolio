@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 import math
 
-# Function to load real data, with fallback to synthetic data
+# Function to load real data only
 def load_data():
     try:
         # Attempt to read the CSV file
@@ -37,50 +37,23 @@ def load_data():
         st.write(f"Rows with at least one NaN: {na_rows} ({na_rows/total_rows:.2%})")
         
         if total_rows > 0:
-            st.success(f"Successfully loaded real BTC macro data!")
+            st.success(f"Successfully loaded BTC macro data!")
             return df
         else:
-            st.warning("No data found in the CSV. Using synthetic data instead.")
-            return generate_synthetic_data()
+            st.error("No data found in the CSV file.")
+            return None
             
     except Exception as e:
-        st.warning(f"Could not load CSV file properly: {e}. Using synthetic data instead.")
-        # Fall back to synthetic data if loading fails
-        return generate_synthetic_data()
-
-# Function to generate synthetic data as a fallback
-def generate_synthetic_data():
-    np.random.seed(42)
-    n_samples = 100
-    
-    # Generate features within realistic ranges
-    gold_prices = np.random.uniform(1000, 2500, n_samples)
-    sp500_values = np.random.uniform(2000, 4500, n_samples)
-    fed_funds_rates = np.random.uniform(0, 5, n_samples)
-    us_m2_supply = np.random.uniform(11000, 22000, n_samples)
-    us_inflation = np.random.uniform(-1, 9, n_samples)
-    
-    # Generate BTC prices with dependencies on all features (more realistic)
-    btc_prices = (10000 + 
-                 5 * gold_prices + 
-                 2 * sp500_values +
-                 -1000 * fed_funds_rates + 
-                 500 * us_inflation +
-                 0.1 * us_m2_supply +
-                 np.random.normal(0, 2000, n_samples))
-    
-    return pd.DataFrame({
-        'gold_price_usd': gold_prices,
-        'SP500': sp500_values,
-        'fed_funds_rate': fed_funds_rates,
-        'US_M2_money_supply_in_billions': us_m2_supply,
-        'US_inflation': us_inflation,
-        'btc_price_usd': btc_prices
-    })
+        st.error(f"Could not load CSV file properly: {e}")
+        return None
 
 # Function to train model with proper NaN handling
 def train_model():
     df = load_data()
+    
+    if df is None:
+        st.error("Cannot train model: no data available.")
+        st.stop()
     
     # Define feature columns
     feature_cols = ['gold_price_usd', 'SP500', 'fed_funds_rate', 'US_inflation', 'US_M2_money_supply_in_billions']
@@ -95,10 +68,8 @@ def train_model():
     st.write(f"Rows after dropping NaNs: {len(X_clean)}")
     
     if len(X_clean) < 10:
-        st.warning("Not enough clean data rows for reliable modeling. Using synthetic data instead.")
-        df = generate_synthetic_data()
-        X_clean = df[feature_cols]
-        y_clean = df['btc_price_usd']
+        st.error("Not enough clean data rows for reliable modeling (minimum 10 required).")
+        st.stop()
     
     # Check for outliers in BTC price
     q1 = y_clean.quantile(0.25)
@@ -132,7 +103,11 @@ def main():
     st.write("Macroeconomics affect BTC's price")
     
     # Train model with all features
-    model, df_clean, feature_cols, rmse, r2 = train_model()
+    try:
+        model, df_clean, feature_cols, rmse, r2 = train_model()
+    except:
+        st.error("Failed to train model. Please ensure your data file is correctly formatted.")
+        st.stop()
     
     # Show model performance
     st.info(f"Model performance: RMSE = ${rmse:.2f}, R² = {r2:.3f}")
