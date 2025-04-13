@@ -104,7 +104,7 @@ def train_model():
 
 def main():
     st.title('BTC price predictor against Macro conditions')
-    st.write("Macroeconomics affect BTC's price")  # Fixed apostrophe issue
+    st.write("Macroeconomics affect BTC's price")  
 
     # Train model
     model = train_model()
@@ -134,7 +134,7 @@ def main():
                 x=[gold_price], 
                 y=[prediction[0]], 
                 mode='markers',
-                 trendline="ols",
+                trendline="ols",
                 marker=dict(size=15, color='red'),
                 name='Prediction'
             )
