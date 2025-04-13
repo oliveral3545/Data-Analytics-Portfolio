@@ -19,19 +19,6 @@ def load_data():
         if 'date' in df.columns:
             df['date'] = pd.to_datetime(df['date'])
         return df
-    except FileNotFoundError:
-        # Create sample data if file doesn't exist
-        st.warning("btc_macroeconomic.csv not found. Using sample data.")
-            
-        df = pd.DataFrame({
-            'date': dates,
-            'gold_price_usd': gold_price,
-            'btc_price_usd': btc_price,
-            'SP500': sp500,
-            'fed_funds_rate': fed_rate,
-            'US_inflation': inflation,
-            'US_M2_money_supply_in_billions': m2_supply
-        })
         
         return df
 
