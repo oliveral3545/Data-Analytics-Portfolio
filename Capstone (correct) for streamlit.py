@@ -162,10 +162,7 @@ def main():
         st.error("Please select at least one feature for prediction.")
         return
     
-    # Display basic data statistics without expandable section
-    st.text(f"Total data points: {len(btc_macro_df)}")
-    missing_values = btc_macro_df[selected_features + ['btc_price_usd']].isna().sum().sum()
-    st.text(f"Total missing values: {missing_values}")
+    # Remove basic data statistics completely
     
     # Train model with selected features
     model, r_squared, rmse, clean_df = train_model(btc_macro_df, selected_features)
@@ -185,8 +182,6 @@ def main():
     })
     st.write("Feature Coefficients:")
     st.dataframe(coef_df)
-    
-    st.write(f"Intercept: {model.intercept_:.2f}")
     
     # User input for prediction
     st.subheader("Make a Prediction")
@@ -215,13 +210,8 @@ def main():
         prediction = make_prediction(model, feature_values)
         
         if prediction is not None:
-            # Show result
+            # Show result without prediction range
             st.success(f'Estimated BTC price: ${prediction:,.2f}')
-            
-            # Display prediction uncertainty based on RMSE
-            lower_bound = prediction - rmse
-            upper_bound = prediction + rmse
-            st.info(f"Prediction range (based on RMSE): ${lower_bound:,.2f} to ${upper_bound:,.2f}")
             
             # Display feature importance (simple version - just use absolute coefficients)
             importance = np.abs(model.coef_)
@@ -244,11 +234,11 @@ def main():
     # Add a correlation matrix for selected features
     if len(selected_features) > 1:
         st.subheader("Feature Correlation Matrix")
-        corr_matrix = clean_df[selected_features + ['btc_price_usd']].corr()
+        corr_matrix = clean_df[selected_features + ['btc_price_usd']].corr().round(2)  # Round to 2 decimal places
         
         fig_corr = px.imshow(
             corr_matrix,
-            text_auto=True,
+            text_auto='.2f',  # Format to always show 2 decimal places
             aspect="auto",
             title="Correlation Matrix",
             color_continuous_scale='RdBu_r'
