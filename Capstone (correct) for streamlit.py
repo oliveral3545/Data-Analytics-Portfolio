@@ -4,172 +4,192 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
 
-# Function to load and process the real BTC macro data
+# Function to load data
 def load_data():
+    # Replace with your actual data loading logic
+    # For now, let's create a sample dataset
     try:
-        # Load the BTC macro data
-        btc_macro_df = pd.read_csv('btc_macroeconomic.csv')
+        df = pd.read_csv('btc_macroeconomic.csv')
+        return df
+    except FileNotFoundError:
+        # Create sample data if file doesn't exist
+        st.warning("btc_macroeconomic.csv not found. Using sample data.")
+        dates = pd.date_range(start='2018-01-01', end='2024-10-01', freq='M')
+        n = len(dates)
         
-        # Clean up the data - convert all non-numeric values to NaN
-        btc_macro_df = btc_macro_df.replace(['No data', 'No', 'NaN', 'nan', 'NULL', 'null', ''], np.nan)
+        np.random.seed(42)  # For reproducible results
+        gold_price = np.random.uniform(1200, 2200, n)
+        btc_price = gold_price * 15 + np.random.normal(0, 5000, n)
+        sp500 = np.random.uniform(2500, 4800, n)
+        fed_rate = np.random.uniform(0, 5, n)
+        inflation = np.random.uniform(1, 9, n)
+        m2_supply = np.random.uniform(15000, 22000, n)
         
-        # Convert date to datetime if it exists
-        if 'date' in btc_macro_df.columns:
-            btc_macro_df['date'] = pd.to_datetime(btc_macro_df['date'], format='%d/%m/%Y', errors='coerce')
-            
-        # Ensure all numeric columns are properly converted to float
-        feature_cols = ['gold_price_usd', 'SP500', 'fed_funds_rate', 'US_inflation', 'US_M2_money_supply_in_billions', 'btc_price_usd']
-        for col in feature_cols:
-            if col in btc_macro_df.columns:
-                btc_macro_df[col] = pd.to_numeric(btc_macro_df[col], errors='coerce')
+        df = pd.DataFrame({
+            'date': dates,
+            'gold_price_usd': gold_price,
+            'btc_price_usd': btc_price,
+            'SP500': sp500,
+            'fed_funds_rate': fed_rate,
+            'US_inflation': inflation,
+            'US_M2_money_supply_in_billions': m2_supply
+        })
         
-        return btc_macro_df
-    except Exception as e:
-        st.error(f"Error loading data: {e}")
-        return None
+        return df
 
 # Function to train the model
-def train_model():
-    # Load the real data
-    btc_macro_df = load_data()
+def train_model(df, feature_cols=['gold_price_usd']):
+    # Remove rows with NaN values
+    mask = ~df[feature_cols + ['btc_price_usd']].isna().any(axis=1)
+    df_clean = df[mask]
     
-    if btc_macro_df is None:
-        st.error("Failed to load the data file. Please make sure 'btc_macroeconomic.csv' is available.")
-        st.stop()
+    if len(df_clean) < 10:
+        st.error("Not enough clean data points for reliable model training")
+        return None
     
-    # Use all macro features for prediction
-    feature_cols = ['gold_price_usd', 'SP500', 'fed_funds_rate', 'US_inflation', 'US_M2_money_supply_in_billions']
-    X = btc_macro_df[feature_cols]
-    y = btc_macro_df['btc_price_usd']
+    X = df_clean[feature_cols]
+    y = df_clean['btc_price_usd']
     
-    # Count rows with missing values
-    total_rows = len(X)
-    na_rows = X.isna().any(axis=1).sum()
-    st.write(f"Total rows: {total_rows}")
-    st.write(f"Rows with at least one NaN: {na_rows} ({na_rows/total_rows:.2%})")
-    
-    # Filter out rows with missing values
-    mask = ~X.isna().any(axis=1)
-    X_clean = X[mask]
-    y_clean = y[mask]
-    st.write(f"Rows after dropping NaNs: {len(X_clean)}")
-    
-    # Check if we have enough data
-    if len(X_clean) < 10:
-        st.error("Not enough complete data rows for reliable modeling.")
-        st.stop()
-    
-    # Train the model
-    X_train, X_test, y_train, y_test = train_test_split(X_clean, y_clean, random_state=123)
     model = LinearRegression()
-    model.fit(X_train, y_train)
+    model.fit(X, y)
     
-    return model, btc_macro_df[mask], feature_cols
+    # Calculate R-squared
+    r_squared = model.score(X, y)
+    
+    return model, r_squared, df_clean
+
+# Function to generate visualization data
+def generate_prediction_data(df_clean, feature_col='gold_price_usd', model=None):
+    if model is None:
+        return df_clean
+    
+    min_val = df_clean[feature_col].min()
+    max_val = df_clean[feature_col].max()
+    
+    # Create range for prediction line
+    x_range = np.linspace(min_val, max_val, 100)
+    y_pred = model.predict(x_range.reshape(-1, 1))
+    
+    pred_df = pd.DataFrame({
+        feature_col: x_range,
+        'btc_price_predicted': y_pred
+    })
+    
+    return pred_df
 
 def main():
     st.title('BTC Price Predictor Against Macro Conditions')
-    st.write("Macroeconomics affect BTC's price")
+    st.write("Explore how macroeconomic factors affect Bitcoin's price")
     
-    # Train model with real data
-    model, clean_data, feature_cols = train_model()
+    # Load data
+    btc_macro_df = load_data()
     
-    # Show data summary
-    with st.expander("View Data Summary"):
-        st.write("Number of clean data points:", len(clean_data))
-        st.write("BTC Price Range:", f"${clean_data['btc_price_usd'].min():,.2f} to ${clean_data['btc_price_usd'].max():,.2f}")
-        st.dataframe(clean_data.describe())
+    # Sidebar for feature selection
+    st.sidebar.header("Model Configuration")
     
-    # Create two columns for inputs
-    col1, col2 = st.columns(2)
+    feature_options = [
+        'gold_price_usd', 
+        'SP500', 
+        'fed_funds_rate', 
+        'US_inflation', 
+        'US_M2_money_supply_in_billions'
+    ]
     
-    # Get min and max values from the actual data for input ranges
-    gold_min, gold_max = float(clean_data['gold_price_usd'].min()), float(clean_data['gold_price_usd'].max())
-    sp500_min, sp500_max = float(clean_data['SP500'].min()), float(clean_data['SP500'].max())
-    fed_min, fed_max = float(clean_data['fed_funds_rate'].min()), float(clean_data['fed_funds_rate'].max())
-    m2_min, m2_max = float(clean_data['US_M2_money_supply_in_billions'].min()), float(clean_data['US_M2_money_supply_in_billions'].max())
-    infl_min, infl_max = float(clean_data['US_inflation'].min()), float(clean_data['US_inflation'].max())
+    # By default, only use gold price as predictor
+    selected_feature = st.sidebar.selectbox(
+        'Select Macro Feature for Prediction',
+        feature_options,
+        index=0
+    )
     
-    # User inputs
-    with col1:
-        gold_price = st.number_input('Gold Price (USD)', 
-                          min_value=gold_min, 
-                          max_value=gold_max, 
-                          value=(gold_min + gold_max)/2)
+    # Display data overview
+    with st.expander("View Data Overview"):
+        st.dataframe(btc_macro_df.describe())
         
-        sp500 = st.number_input('S&P 500 Index', 
-                          min_value=sp500_min, 
-                          max_value=sp500_max, 
-                          value=(sp500_min + sp500_max)/2)
-        
-        fed_rate = st.number_input('Fed Funds Rate (%)', 
-                          min_value=fed_min, 
-                          max_value=fed_max, 
-                          value=(fed_min + fed_max)/2,
-                          step=0.1)
+        # Display data statistics
+        st.write(f"Total data points: {len(btc_macro_df)}")
+        missing_values = btc_macro_df[[selected_feature, 'btc_price_usd']].isna().sum()
+        st.write(f"Missing values in {selected_feature}: {missing_values[selected_feature]}")
+        st.write(f"Missing values in BTC price: {missing_values['btc_price_usd']}")
     
-    with col2:
-        m2_supply = st.number_input('US M2 Money Supply (Billions $)', 
-                          min_value=m2_min, 
-                          max_value=m2_max, 
-                          value=(m2_min + m2_max)/2)
-        
-        inflation = st.number_input('US Inflation Rate (%)', 
-                          min_value=infl_min, 
-                          max_value=infl_max, 
-                          value=(infl_min + infl_max)/2,
-                          step=0.1)
+    # Train model
+    model, r_squared, clean_df = train_model(btc_macro_df, [selected_feature])
     
-    if st.button('Predict BTC Price'):
-        # Create input array with all features
-        input_features = [[gold_price, sp500, fed_rate, m2_supply, inflation]]
-        
-        # Perform prediction
-        prediction = model.predict(input_features)[0]
-        
-          
-        # Show result
-        st.success(f'Estimated BTC price: ${prediction:,.2f}')
-        
-        # Show feature importance
-        feature_names = ['Gold Price', 'S&P 500', 'Fed Funds Rate', 'M2 Supply', 'Inflation']
-        coefficients = model.coef_
-        
-        # Create bar chart of coefficients
-        coef_df = pd.DataFrame({
-            'Feature': feature_names,
-            'Impact': coefficients
-        })
-        
-        st.subheader('Feature Importance (Coefficients)')
-        fig_coef = px.bar(coef_df, x='Feature', y='Impact',
-                     title='Impact of Macro Factors on BTC Price')
-        st.plotly_chart(fig_coef)
-        
-        # Create visualization with the actual data
-        fig = px.scatter(clean_data, x='gold_price_usd', y='btc_price_usd', 
-                       title='Gold Price vs BTC Price Relationship')
-        
-        # Add prediction point
-        fig.add_trace(
-            go.Scatter(
-                x=[gold_price], 
-                y=[prediction], 
-                mode='markers',
-                marker=dict(size=15, color='red'),
-                name='Prediction'
-            )
+    if model is None:
+        st.error("Could not train model. Please check your data.")
+        return
+    
+    # Display model info
+    st.write(f"Model R-squared: {r_squared:.4f}")
+    st.write(f"Coefficient for {selected_feature}: {model.coef_[0]:.4f}")
+    st.write(f"Intercept: {model.intercept_:.2f}")
+    
+    # User input for prediction
+    st.subheader("Make a Prediction")
+    
+    # Get min/max values for the slider
+    min_val = clean_df[selected_feature].min()
+    max_val = clean_df[selected_feature].max()
+    current_val = clean_df[selected_feature].median()
+    
+    # Input widget
+    input_value = st.slider(
+        f'{selected_feature}',
+        min_value=float(min_val),
+        max_value=float(max_val),
+        value=float(current_val),
+        step=float((max_val - min_val) / 100)
+    )
+    
+    # Perform prediction
+    prediction = model.predict([[input_value]])[0]
+    
+    # Show result
+    st.success(f'Estimated BTC price: ${prediction:,.2f}')
+    
+    # Visualization
+    st.subheader("Data Visualization")
+    
+    # Create scatter plot
+    fig = px.scatter(clean_df, x=selected_feature, y='btc_price_usd',
+                    title=f'{selected_feature} vs BTC Price Relationship',
+                    opacity=0.7)
+    
+    # Add regression line
+    pred_data = generate_prediction_data(clean_df, selected_feature, model)
+    fig.add_trace(
+        go.Scatter(
+            x=pred_data[selected_feature],
+            y=pred_data['btc_price_predicted'],
+            mode='lines',
+            name='Regression Line',
+            line=dict(color='blue')
         )
-        
-        st.plotly_chart(fig)
-        
-        # If date column exists, show time series
-        if 'date' in clean_data.columns:
-            st.subheader('BTC Price Over Time')
-            time_fig = px.line(clean_data.sort_values('date'), x='date', y='btc_price_usd',
-                           title='Bitcoin Price Historical Trend')
-            st.plotly_chart(time_fig)
+    )
+    
+    # Add prediction point
+    fig.add_trace(
+        go.Scatter(
+            x=[input_value],
+            y=[prediction],
+            mode='markers',
+            marker=dict(size=15, color='red'),
+            name='Prediction'
+        )
+    )
+    
+    # Customize layout
+    fig.update_layout(
+        xaxis_title=selected_feature,
+        yaxis_title='BTC Price (USD)',
+        height=600
+    )
+    
+    st.plotly_chart(fig)
+    
+    # Add disclaimer
+    st.info("Disclaimer: This tool is for educational purposes only. Cryptocurrency investments carry significant risk.")
 
 if __name__ == '__main__':
     main()
