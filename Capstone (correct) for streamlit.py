@@ -22,17 +22,7 @@ def load_data():
     except FileNotFoundError:
         # Create sample data if file doesn't exist
         st.warning("btc_macroeconomic.csv not found. Using sample data.")
-        dates = pd.date_range(start='2018-01-01', end='2024-10-01', freq='M')
-        n = len(dates)
-        
-        np.random.seed(42)  # For reproducible results
-        gold_price = np.random.uniform(1200, 2200, n)
-        btc_price = gold_price * 15 + np.random.normal(0, 5000, n)
-        sp500 = np.random.uniform(2500, 4800, n)
-        fed_rate = np.random.uniform(0, 5, n)
-        inflation = np.random.uniform(1, 9, n)
-        m2_supply = np.random.uniform(15000, 22000, n)
-        
+            
         df = pd.DataFrame({
             'date': dates,
             'gold_price_usd': gold_price,
