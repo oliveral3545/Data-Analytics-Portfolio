@@ -4,7 +4,6 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 import math
@@ -73,7 +72,7 @@ def generate_synthetic_data():
         'btc_price_usd': btc_prices
     })
 
-# Function to train model with feature scaling
+# Function to train model without scaling
 def train_model():
     df = load_data()
     
@@ -82,7 +81,7 @@ def train_model():
     q3 = df['btc_price_usd'].quantile(0.75)
     iqr = q3 - q1
     
-    # Filter out extreme outliers (more aggressive filtering)
+    # Filter out extreme outliers
     df_filtered = df[
         (df['btc_price_usd'] >= q1 - 1.5 * iqr) & 
         (df['btc_price_usd'] <= q3 + 1.5 * iqr)
@@ -97,16 +96,11 @@ def train_model():
     X = df[feature_cols]
     y = df['btc_price_usd']
     
-    # Use a more robust scaler for better handling of outliers
-    scaler = RobustScaler()
-    X_scaled = scaler.fit_transform(X)
-    
     # Split data for evaluation
-    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    # Train linear regression model with regularization to prevent extreme coefficients
-    from sklearn.linear_model import Ridge
-    model = Ridge(alpha=1.0)  # Alpha provides regularization
+    # Train linear regression model
+    model = LinearRegression()
     model.fit(X_train, y_train)
     
     # Evaluate model
@@ -114,14 +108,14 @@ def train_model():
     rmse = math.sqrt(mean_squared_error(y_test, y_pred))
     r2 = r2_score(y_test, y_pred)
     
-    return model, scaler, df, feature_cols, rmse, r2
+    return model, df, feature_cols, rmse, r2
 
 def main():
     st.title('BTC Price Predictor Against Macro Conditions')
     st.write("Macroeconomics affect BTC's price")
     
     # Train model with all features
-    model, scaler, df, feature_cols, rmse, r2 = train_model()
+    model, df, feature_cols, rmse, r2 = train_model()
     
     # Show model performance
     st.info(f"Model performance: RMSE = ${rmse:.2f}, R² = {r2:.3f}")
@@ -173,21 +167,11 @@ def main():
                                    step=0.1)
     
     if st.button('Predict BTC Price'):
-        # Create input array with all features
-        input_features = np.array([[gold_price, sp500, fed_rate, m2_supply, inflation]])
-        
-        # Scale the input features using the same scaler used for training
-        input_scaled = scaler.transform(input_features)
-        
-        # Check if inputs are within reasonable range of training data
-        for i, feature in enumerate(feature_cols):
-            feature_min = df[feature].min()
-            feature_max = df[feature].max()
-            if input_features[0][i] < feature_min * 0.5 or input_features[0][i] > feature_max * 1.5:
-                st.warning(f"Warning: Your input for {feature} is far outside the normal range. Prediction may be less reliable.")
+        # Create input array with all features (unscaled)
+        input_features = [[gold_price, sp500, fed_rate, m2_supply, inflation]]
         
         # Perform prediction
-        prediction = model.predict(input_scaled)[0]
+        prediction = model.predict(input_features)[0]
         
         # Constrain prediction to be within a reasonable range of historical values
         min_btc = df['btc_price_usd'].min()
@@ -219,8 +203,7 @@ def main():
         st.plotly_chart(fig_coef)
             
         # Create scatter plot of actual vs predicted BTC prices
-        X_scaled = scaler.transform(df[feature_cols])
-        df['predicted_price'] = model.predict(X_scaled)
+        df['predicted_price'] = model.predict(df[feature_cols])
         
         fig = px.scatter(df, x='btc_price_usd', y='predicted_price',
                       title='Actual vs Predicted BTC Prices',
