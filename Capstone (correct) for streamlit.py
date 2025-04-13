@@ -19,12 +19,10 @@ def load_data():
         if 'date' in df.columns:
             df['date'] = pd.to_datetime(df['date'])
         return df
-            except FileNotFoundError:
+    except FileNotFoundError:
         # Create sample data if file doesn't exist
         st.warning("btc_macroeconomic.csv not found. Using sample data.")
-            
-    
-return df
+        return None
 
 # Function to preprocess data and ensure it's suitable for training
 def preprocess_data(df, feature_cols, target_col='btc_price_usd'):
