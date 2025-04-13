@@ -128,17 +128,7 @@ def main():
         # Perform prediction
         prediction = model.predict(input_features)[0]
         
-        # Constrain prediction to be within a reasonable range of historical values
-        min_btc = clean_data['btc_price_usd'].min()
-        max_btc = clean_data['btc_price_usd'].max()
-        
-        if prediction < min_btc * 0.5:
-            st.warning(f"Raw prediction (${prediction:.2f}) was below historical minimum. Adjusting to a reasonable value.")
-            prediction = min_btc * 0.5
-        elif prediction > max_btc * 1.5:
-            st.warning(f"Raw prediction (${prediction:.2f}) was above historical maximum. Adjusting to a reasonable value.")
-            prediction = max_btc * 1.5
-        
+          
         # Show result
         st.success(f'Estimated BTC price: ${prediction:,.2f}')
         
