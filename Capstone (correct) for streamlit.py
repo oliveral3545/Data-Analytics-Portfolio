@@ -124,7 +124,7 @@ def main():
 
         # Visualization
         df = generate_data()
-        fig = px.scatter(df, x='gold_price_usd', y='btc_price_usd', 
+        fig = px.scatter(df, x='gold_price_usd', y='btc_price_usd',trendline="ols", 
                        title='Gold Price vs BTC Price Relationship')
 
         # Add prediction point
@@ -134,7 +134,6 @@ def main():
                 x=[gold_price], 
                 y=[prediction[0]], 
                 mode='markers',
-                trendline="ols",
                 marker=dict(size=15, color='red'),
                 name='Prediction'
             )
