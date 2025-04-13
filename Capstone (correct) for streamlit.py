@@ -203,14 +203,6 @@ def main():
                 'Importance': importance_normalized
             }).sort_values('Importance', ascending=False)
             
-            st.subheader("Feature Importance")
-            fig_importance = px.bar(
-                importance_df, 
-                x='Feature', 
-                y='Importance',
-                title='Relative Importance of Each Feature'
-            )
-            st.plotly_chart(fig_importance)
     
     # Add a correlation matrix for selected features
     if len(selected_features) > 1:
