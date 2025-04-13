@@ -128,10 +128,7 @@ def main():
         st.write("Available columns:", ", ".join(btc_macro_df.columns.tolist()))
         return
     
-    
-    # Sidebar for model configuration
-    st.sidebar.header("Model Configuration")
-    
+ 
     # Let user select features to include
     st.sidebar.subheader("Select Features to Include")
     selected_features = []
@@ -144,9 +141,7 @@ def main():
         st.error("Please select at least one feature for prediction.")
         return
     
-    # Remove basic data statistics completely
-    
-    # Train model with selected features
+          # Train model with selected features
     model, r_squared, rmse, clean_df = train_model(btc_macro_df, selected_features)
     
     if model is None or clean_df is None or clean_df.empty:
