@@ -55,7 +55,6 @@ def preprocess_data(df, feature_cols, target_col='btc_price_usd'):
     
     return X, y, df_clean
 
-# Function to train the model and calculate RMSE
 def train_model(df, feature_cols, random_state=123):
     # Preprocess data
     X, y, df_clean = preprocess_data(df, feature_cols)
@@ -64,16 +63,20 @@ def train_model(df, feature_cols, random_state=123):
         return None, None, None, None
     
     try:
+        # Split data into training and testing sets
+        from sklearn.model_selection import train_test_split
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=random_state)
+        
         # Train model
         model = LinearRegression()
-        model.fit(X, y)
+        model.fit(X_train, y_train)
         
-        # Calculate R-squared
-        r_squared = model.score(X, y)
+        # Calculate R-squared on test data
+        r_squared = model.score(X_test, y_test)
         
-        # Calculate RMSE (Root Mean Square Error)
-        y_pred = model.predict(X)
-        rmse = np.sqrt(np.mean((y - y_pred) ** 2))
+        # Calculate RMSE on test data
+        y_pred = model.predict(X_test)
+        rmse = np.sqrt(np.mean((y_test - y_pred) ** 2))
         
         return model, r_squared, rmse, df_clean
     except Exception as e:
