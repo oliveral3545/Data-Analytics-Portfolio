@@ -24,7 +24,7 @@ def load_data():
         st.warning("btc_macroeconomic.csv not found. Using sample data.")
             
     
-        return df
+return df
 
 # Function to preprocess data and ensure it's suitable for training
 def preprocess_data(df, feature_cols, target_col='btc_price_usd'):
