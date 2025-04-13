@@ -127,7 +127,10 @@ def main():
         # Show available columns
         st.write("Available columns:", ", ".join(btc_macro_df.columns.tolist()))
         return
-    
+
+        
+    # Sidebar for model configuration
+    st.sidebar.header("Model Configuration")    
  
     # Let user select features to include
     st.sidebar.subheader("Select Features to Include")
