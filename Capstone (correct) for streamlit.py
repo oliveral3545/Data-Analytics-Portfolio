@@ -4,8 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 import math
@@ -75,7 +74,7 @@ def generate_synthetic_data():
     })
 
 # Function to train model with feature scaling
-def train_model(model_type='linear'):
+def train_model():
     df = load_data()
     
     # Check for outliers in BTC price
@@ -83,7 +82,7 @@ def train_model(model_type='linear'):
     q3 = df['btc_price_usd'].quantile(0.75)
     iqr = q3 - q1
     
-    # Filter out extreme outliers
+    # Filter out extreme outliers (more aggressive filtering)
     df_filtered = df[
         (df['btc_price_usd'] >= q1 - 1.5 * iqr) & 
         (df['btc_price_usd'] <= q3 + 1.5 * iqr)
@@ -98,19 +97,16 @@ def train_model(model_type='linear'):
     X = df[feature_cols]
     y = df['btc_price_usd']
     
-    # Apply feature scaling
-    scaler = StandardScaler()
+    # Use a more robust scaler for better handling of outliers
+    scaler = RobustScaler()
     X_scaled = scaler.fit_transform(X)
     
     # Split data for evaluation
     X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
     
-    # Train model based on selected type
-    if model_type == 'random_forest':
-        model = RandomForestRegressor(n_estimators=100, random_state=42)
-    else:
-        model = LinearRegression()
-    
+    # Train linear regression model with regularization to prevent extreme coefficients
+    from sklearn.linear_model import Ridge
+    model = Ridge(alpha=1.0)  # Alpha provides regularization
     model.fit(X_train, y_train)
     
     # Evaluate model
@@ -124,18 +120,8 @@ def main():
     st.title('BTC Price Predictor Against Macro Conditions')
     st.write("Macroeconomics affect BTC's price")
     
-    # Model selection
-    model_type = st.radio(
-        "Select prediction model:",
-        ["Linear Regression", "Random Forest"],
-        index=1,  # Default to Random Forest for better predictions
-        horizontal=True
-    )
-    
-    model_key = 'linear' if model_type == "Linear Regression" else 'random_forest'
-    
     # Train model with all features
-    model, scaler, df, feature_cols, rmse, r2 = train_model(model_key)
+    model, scaler, df, feature_cols, rmse, r2 = train_model()
     
     # Show model performance
     st.info(f"Model performance: RMSE = ${rmse:.2f}, R² = {r2:.3f}")
@@ -193,42 +179,44 @@ def main():
         # Scale the input features using the same scaler used for training
         input_scaled = scaler.transform(input_features)
         
+        # Check if inputs are within reasonable range of training data
+        for i, feature in enumerate(feature_cols):
+            feature_min = df[feature].min()
+            feature_max = df[feature].max()
+            if input_features[0][i] < feature_min * 0.5 or input_features[0][i] > feature_max * 1.5:
+                st.warning(f"Warning: Your input for {feature} is far outside the normal range. Prediction may be less reliable.")
+        
         # Perform prediction
-        prediction = model.predict(input_scaled)
+        prediction = model.predict(input_scaled)[0]
+        
+        # Constrain prediction to be within a reasonable range of historical values
+        min_btc = df['btc_price_usd'].min()
+        max_btc = df['btc_price_usd'].max()
+        
+        if prediction < min_btc * 0.5:
+            st.warning(f"Raw prediction (${prediction:.2f}) was below historical minimum. Adjusting to a reasonable value.")
+            prediction = min_btc * 0.5
+        elif prediction > max_btc * 1.5:
+            st.warning(f"Raw prediction (${prediction:.2f}) was above historical maximum. Adjusting to a reasonable value.")
+            prediction = max_btc * 1.5
         
         # Show result
-        st.success(f'Estimated BTC price: ${prediction[0]:,.2f}')
+        st.success(f'Estimated BTC price: ${prediction:,.2f}')
         
-        # For Linear Regression, show feature importance
-        if model_type == "Linear Regression":
-            feature_names = ['Gold Price', 'S&P 500', 'Fed Funds Rate', 'M2 Supply', 'Inflation']
-            coefficients = model.coef_
-            
-            # Create bar chart of coefficients
-            coef_df = pd.DataFrame({
-                'Feature': feature_names,
-                'Impact': coefficients
-            })
-            
-            st.subheader('Feature Importance (Coefficients)')
-            fig_coef = px.bar(coef_df, x='Feature', y='Impact',
-                         title='Impact of Macro Factors on BTC Price')
-            st.plotly_chart(fig_coef)
-        else:
-            # For Random Forest, show feature importance
-            feature_names = ['Gold Price', 'S&P 500', 'Fed Funds Rate', 'M2 Supply', 'Inflation']
-            importances = model.feature_importances_
-            
-            # Create bar chart of feature importances
-            imp_df = pd.DataFrame({
-                'Feature': feature_names,
-                'Importance': importances
-            }).sort_values('Importance', ascending=False)
-            
-            st.subheader('Feature Importance')
-            fig_imp = px.bar(imp_df, x='Feature', y='Importance',
-                         title='Importance of Macro Factors for BTC Price')
-            st.plotly_chart(fig_imp)
+        # Show feature importance
+        feature_names = ['Gold Price', 'S&P 500', 'Fed Funds Rate', 'M2 Supply', 'Inflation']
+        coefficients = model.coef_
+        
+        # Create bar chart of coefficients
+        coef_df = pd.DataFrame({
+            'Feature': feature_names,
+            'Impact': coefficients
+        })
+        
+        st.subheader('Feature Importance (Coefficients)')
+        fig_coef = px.bar(coef_df, x='Feature', y='Impact',
+                     title='Impact of Macro Factors on BTC Price')
+        st.plotly_chart(fig_coef)
             
         # Create scatter plot of actual vs predicted BTC prices
         X_scaled = scaler.transform(df[feature_cols])
@@ -257,8 +245,8 @@ def main():
         # Add prediction point
         fig.add_trace(
             go.Scatter(
-                x=[prediction[0]],
-                y=[prediction[0]],
+                x=[prediction],
+                y=[prediction],
                 mode='markers',
                 marker=dict(size=15, color='green', symbol='star'),
                 name='Your Prediction'
