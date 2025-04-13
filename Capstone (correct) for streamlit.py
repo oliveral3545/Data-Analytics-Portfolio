@@ -4,6 +4,11 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+import math
 
 # Function to load real data, with fallback to synthetic data
 def load_data():
@@ -35,20 +40,20 @@ def generate_synthetic_data():
     n_samples = 100
     
     # Generate features within realistic ranges
-    gold_prices = np.random.uniform(0, 3000, n_samples)
-    sp500_values = np.random.uniform(2000, 5000, n_samples)
+    gold_prices = np.random.uniform(1000, 2500, n_samples)
+    sp500_values = np.random.uniform(2000, 4500, n_samples)
     fed_funds_rates = np.random.uniform(0, 5, n_samples)
     us_m2_supply = np.random.uniform(11000, 22000, n_samples)
     us_inflation = np.random.uniform(-1, 9, n_samples)
     
-    # Generate BTC prices with dependencies on all features
+    # Generate BTC prices with dependencies on all features (more realistic)
     btc_prices = (10000 + 
-                 15 * gold_prices + 
-                 3 * sp500_values +
-                 -2000 * fed_funds_rates + 
-                 1000 * us_inflation +
-                 0.5 * us_m2_supply +
-                 np.random.normal(0, 3000, n_samples))
+                 5 * gold_prices + 
+                 2 * sp500_values +
+                 -1000 * fed_funds_rates + 
+                 500 * us_inflation +
+                 0.1 * us_m2_supply +
+                 np.random.normal(0, 2000, n_samples))
     
     return pd.DataFrame({
         'gold_price_usd': gold_prices,
@@ -59,22 +64,71 @@ def generate_synthetic_data():
         'btc_price_usd': btc_prices
     })
 
-# Function to train model with actual data
-def train_model():
+# Function to train model with feature scaling
+def train_model(model_type='linear'):
     df = load_data()
+    
+    # Check for outliers in BTC price
+    q1 = df['btc_price_usd'].quantile(0.25)
+    q3 = df['btc_price_usd'].quantile(0.75)
+    iqr = q3 - q1
+    
+    # Filter out extreme outliers
+    df_filtered = df[
+        (df['btc_price_usd'] >= q1 - 1.5 * iqr) & 
+        (df['btc_price_usd'] <= q3 + 1.5 * iqr)
+    ]
+    
+    if len(df_filtered) < len(df):
+        st.info(f"Removed {len(df) - len(df_filtered)} outliers from the dataset.")
+        df = df_filtered
+    
     # Make sure column names match those in your CSV
-    X = df[['gold_price_usd', 'SP500', 'fed_funds_rate', 'US_inflation', 'US_M2_money_supply_in_billions']]
+    feature_cols = ['gold_price_usd', 'SP500', 'fed_funds_rate', 'US_inflation', 'US_M2_money_supply_in_billions']
+    X = df[feature_cols]
     y = df['btc_price_usd']
-    model = LinearRegression()
-    model.fit(X, y)
-    return model, df
+    
+    # Apply feature scaling
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    
+    # Split data for evaluation
+    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+    
+    # Train model based on selected type
+    if model_type == 'random_forest':
+        model = RandomForestRegressor(n_estimators=100, random_state=42)
+    else:
+        model = LinearRegression()
+    
+    model.fit(X_train, y_train)
+    
+    # Evaluate model
+    y_pred = model.predict(X_test)
+    rmse = math.sqrt(mean_squared_error(y_test, y_pred))
+    r2 = r2_score(y_test, y_pred)
+    
+    return model, scaler, df, feature_cols, rmse, r2
 
 def main():
     st.title('BTC Price Predictor Against Macro Conditions')
     st.write("Macroeconomics affect BTC's price")
     
+    # Model selection
+    model_type = st.radio(
+        "Select prediction model:",
+        ["Linear Regression", "Random Forest"],
+        index=1,  # Default to Random Forest for better predictions
+        horizontal=True
+    )
+    
+    model_key = 'linear' if model_type == "Linear Regression" else 'random_forest'
+    
     # Train model with all features
-    model, df = train_model()
+    model, scaler, df, feature_cols, rmse, r2 = train_model(model_key)
+    
+    # Show model performance
+    st.info(f"Model performance: RMSE = ${rmse:.2f}, R² = {r2:.3f}")
     
     # Show data summary
     with st.expander("View Data Summary"):
@@ -123,47 +177,102 @@ def main():
                                    step=0.1)
     
     if st.button('Predict BTC Price'):
-        # Create input array with all features for prediction
-        input_features = [[gold_price, sp500, fed_rate, m2_supply, inflation]]
+        # Create input array with all features
+        input_features = np.array([[gold_price, sp500, fed_rate, m2_supply, inflation]])
+        
+        # Scale the input features using the same scaler used for training
+        input_scaled = scaler.transform(input_features)
         
         # Perform prediction
-        prediction = model.predict(input_features)
+        prediction = model.predict(input_scaled)
         
         # Show result
         st.success(f'Estimated BTC price: ${prediction[0]:,.2f}')
         
-        # Calculate feature importance (coefficients)
-        feature_names = ['Gold Price', 'S&P 500', 'Fed Funds Rate', 'M2 Supply', 'Inflation']
-        coefficients = model.coef_
+        # For Linear Regression, show feature importance
+        if model_type == "Linear Regression":
+            feature_names = ['Gold Price', 'S&P 500', 'Fed Funds Rate', 'M2 Supply', 'Inflation']
+            coefficients = model.coef_
+            
+            # Create bar chart of coefficients
+            coef_df = pd.DataFrame({
+                'Feature': feature_names,
+                'Impact': coefficients
+            })
+            
+            st.subheader('Feature Importance (Coefficients)')
+            fig_coef = px.bar(coef_df, x='Feature', y='Impact',
+                         title='Impact of Macro Factors on BTC Price')
+            st.plotly_chart(fig_coef)
+        else:
+            # For Random Forest, show feature importance
+            feature_names = ['Gold Price', 'S&P 500', 'Fed Funds Rate', 'M2 Supply', 'Inflation']
+            importances = model.feature_importances_
+            
+            # Create bar chart of feature importances
+            imp_df = pd.DataFrame({
+                'Feature': feature_names,
+                'Importance': importances
+            }).sort_values('Importance', ascending=False)
+            
+            st.subheader('Feature Importance')
+            fig_imp = px.bar(imp_df, x='Feature', y='Importance',
+                         title='Importance of Macro Factors for BTC Price')
+            st.plotly_chart(fig_imp)
         
-        # Create bar chart of coefficients
-        coef_df = pd.DataFrame({
-            'Feature': feature_names,
-            'Impact': coefficients
+        # Compare your inputs to historical data
+        input_df = pd.DataFrame({
+            'Gold Price': [gold_price],
+            'S&P 500': [sp500],
+            'Fed Funds Rate': [fed_rate],
+            'M2 Supply': [m2_supply],
+            'Inflation': [inflation]
         })
         
-        st.subheader('Feature Importance')
-        fig_coef = px.bar(coef_df, x='Feature', y='Impact',
-                     title='Impact of Macro Factors on BTC Price')
-        st.plotly_chart(fig_coef)
+        # Show where the inputs fall within historical ranges
+        st.subheader('Your Inputs vs Historical Ranges')
+        for feature, value in zip(feature_names, input_features[0]):
+            col_name = feature_cols[feature_names.index(feature)]
+            hist_min = df[col_name].min()
+            hist_max = df[col_name].max()
+            hist_mean = df[col_name].mean()
+            
+            # Calculate percentile of input
+            percentile = (value - hist_min) / (hist_max - hist_min) * 100 if hist_max > hist_min else 50
+            
+            st.write(f"**{feature}**: Your input of {value:.2f} is at the {percentile:.1f}th percentile of historical data.")
         
-        # Create visualization for the most influential feature
-        most_important_idx = abs(coefficients).argmax()
-        most_important_feature = feature_names[most_important_idx]
-        feature_cols = ['gold_price_usd', 'SP500', 'fed_funds_rate', 'US_M2_money_supply_in_billions', 'US_inflation']
-        most_important_col = feature_cols[most_important_idx]
+        # Create scatter plot of actual vs predicted BTC prices
+        X_scaled = scaler.transform(df[feature_cols])
+        df['predicted_price'] = model.predict(X_scaled)
         
-        fig = px.scatter(df, x=most_important_col, y='btc_price_usd',
-                       trendline="ols",
-                       title=f'{most_important_feature} vs BTC Price Relationship')
+        fig = px.scatter(df, x='btc_price_usd', y='predicted_price',
+                      title='Actual vs Predicted BTC Prices',
+                      labels={
+                          'btc_price_usd': 'Actual BTC Price',
+                          'predicted_price': 'Predicted BTC Price'
+                      })
+        
+        # Add diagonal line for perfect predictions
+        max_val = max(df['btc_price_usd'].max(), df['predicted_price'].max())
+        min_val = min(df['btc_price_usd'].min(), df['predicted_price'].min())
+        fig.add_trace(
+            go.Scatter(
+                x=[min_val, max_val],
+                y=[min_val, max_val],
+                mode='lines',
+                line=dict(color='red', dash='dash'),
+                name='Perfect Prediction'
+            )
+        )
         
         # Add prediction point
         fig.add_trace(
             go.Scatter(
-                x=[input_features[0][most_important_idx]],
+                x=[prediction[0]],
                 y=[prediction[0]],
                 mode='markers',
-                marker=dict(size=15, color='red'),
+                marker=dict(size=15, color='green', symbol='star'),
                 name='Your Prediction'
             )
         )
@@ -173,8 +282,12 @@ def main():
         # Add time series chart if date column exists
         if 'date' in df.columns:
             st.subheader('BTC Price Over Time')
-            time_fig = px.line(df.sort_values('date'), x='date', y='btc_price_usd',
-                           title='Bitcoin Price Historical Trend')
+            time_fig = px.line(df.sort_values('date'), x='date', y=['btc_price_usd', 'predicted_price'],
+                           title='Bitcoin Price: Actual vs Model Predictions',
+                           labels={
+                               'value': 'Price (USD)',
+                               'variable': 'Data Type'
+                           })
             st.plotly_chart(time_fig)
 
 if __name__ == '__main__':
