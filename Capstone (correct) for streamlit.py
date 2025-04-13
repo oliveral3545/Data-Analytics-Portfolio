@@ -176,14 +176,14 @@ def main():
         max_val = float(clean_df[feature].max())
         current_val = float(clean_df[feature].median())
     
-    feature_val = st.slider(
-        f'{feature}',
-        min_value=min_val,
-        max_value=max_val,
-        value=current_val,
-        step=(max_val - min_val) / 100,
-        key=f"slider_{feature}"
-    )
+        feature_val = st.slider(
+            f'{feature}',
+            min_value=min_val,
+            max_value=max_val,
+            value=current_val,
+            step=(max_val - min_val) / 100,
+            key=f"slider_{feature}"
+        )
         feature_values.append(feature_val)
 
     # Predict button
