@@ -56,7 +56,7 @@ def preprocess_data(df, feature_cols, target_col='btc_price_usd'):
     return X, y, df_clean
 
 # Function to train the model and calculate RMSE
-def train_model(df, feature_cols):
+def train_model(df, feature_cols, random_state=123):
     # Preprocess data
     X, y, df_clean = preprocess_data(df, feature_cols)
     
