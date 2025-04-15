@@ -152,6 +152,35 @@ def main():
         if model is None or clean_df is None or clean_df.empty:
             st.error("Could not train model. Please check your data.")
             return
+
+        # User input for prediction
+        st.subheader("Make a Prediction")
+        
+        # Create input sliders for each feature
+        feature_values = []
+        
+        # Make sure to use the actual column names from your dataset
+        for feature in selected_features:  # Use the features that were selected for training
+            min_val = float(clean_df[feature].min())
+            max_val = float(clean_df[feature].max())
+            current_val = float(clean_df[feature].median())
+            
+            feature_val = st.slider(
+                f'{feature}',
+                min_value=min_val,
+                max_value=max_val,
+                value=current_val,
+                step=(max_val - min_val) / 100,
+                key=f"slider_{feature}"
+            )
+            feature_values.append(feature_val)
+
+        # Predict button
+        if st.button("Predict BTC Price"):
+            prediction = make_prediction(model, feature_values)
+            
+            if prediction is not None:
+                st.success(f'Estimated BTC price: ${prediction:,.2f}')
         
         # Display model info
         st.subheader("Model Information")
@@ -188,37 +217,7 @@ def main():
     
             st.markdown("**5. M2 money supply (coefficient: -2.71):**")
             st.write("For each billion dollar increase in M2 money supply, Bitcoin price tends to decrease by $2.71. This slight negative relationship is counterintuitive since Bitcoin is often positioned as a hedge against monetary expansion. There might be lag effects not captured in the current model.")
-
-        
-        # User input for prediction
-        st.subheader("Make a Prediction")
-        
-        # Create input sliders for each feature
-        feature_values = []
-        
-        # Make sure to use the actual column names from your dataset
-        for feature in selected_features:  # Use the features that were selected for training
-            min_val = float(clean_df[feature].min())
-            max_val = float(clean_df[feature].max())
-            current_val = float(clean_df[feature].median())
-            
-            feature_val = st.slider(
-                f'{feature}',
-                min_value=min_val,
-                max_value=max_val,
-                value=current_val,
-                step=(max_val - min_val) / 100,
-                key=f"slider_{feature}"
-            )
-            feature_values.append(feature_val)
-
-        # Predict button
-        if st.button("Predict BTC Price"):
-            prediction = make_prediction(model, feature_values)
-            
-            if prediction is not None:
-                st.success(f'Estimated BTC price: ${prediction:,.2f}')
-        
+                        
         # Add disclaimer
         st.info("Disclaimer: This tool is for educational purposes only. Cryptocurrency investments carry significant risk.")
     
