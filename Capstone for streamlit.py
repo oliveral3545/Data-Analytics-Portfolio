@@ -9,8 +9,6 @@ import warnings
 # Suppress warnings
 warnings.filterwarnings('ignore')
 
-st.set_page_config(page_title="BTC-Price-Predictor-Against-Macro-Conditions")
-
 # Function to load data
 def load_data():
     # Replace with your actual data loading logic
