@@ -99,9 +99,9 @@ def make_prediction(model, feature_values):
         st.error(f"Error making prediction: {e}")
         return None
 
+st.set_page_config(page_title="BTC-Price-Predictor-Against-Macro-Conditions")
+
 def main():
-    st.set_page_config(
-    page_title="BTC-Price-Predictor-Against-Macro-Conditions")
     st.title('BTC Price Predictor Against Macro Conditions')
     st.write("Explore how macroeconomic factors affect Bitcoin's price")
     
