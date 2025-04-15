@@ -99,7 +99,6 @@ def make_prediction(model, feature_values):
         st.error(f"Error making prediction: {e}")
         return None
 
-
 def main():
     st.title('BTC Price Predictor Against Macro Conditions')
     st.write("""This model demonstrates how Bitcoin's price dynamics have evolved beyond the traditional 4-year cycle narrative in 2025. 
@@ -131,7 +130,6 @@ def main():
         st.write("Available columns:", ", ".join(btc_macro_df.columns.tolist()))
         return
     
-    
     # Sidebar for model configuration
     st.sidebar.header("Model Configuration")
     
@@ -147,7 +145,6 @@ def main():
         st.error("Please select at least one feature for prediction.")
         return
     
-
     # Train model with selected features
     model, r_squared, rmse, clean_df = train_model(btc_macro_df, selected_features)
     
@@ -167,13 +164,11 @@ def main():
     st.write("Feature Coefficients:")
     st.dataframe(coef_df)
 
-import streamlit as st
+    # Title for the feature importance section
+    st.subheader("Feature Importance:")
 
-# Title for the feature importance section
-st.subheader("Feature Importance:")
-
-# Create expandable sections for each feature
-with st.container():
+    # Create expandable sections for each feature
+    with st.container():
     st.markdown("**1. Inflation (coefficient: 541.73):**")
     st.write("For each percentage point increase in inflation, Bitcoin price is estimated to increase by $541.73, on average. This supports the narrative that Bitcoin serves as an inflation hedge - when fiat currencies lose purchasing power, Bitcoin tends to gain value.")
     
@@ -194,40 +189,35 @@ with st.container():
     st.markdown("**5. M2 money supply (coefficient: -2.71):**")
     st.write("For each billion dollar increase in M2 money supply, Bitcoin price tends to decrease by $2.71. This slight negative relationship is counterintuitive since Bitcoin is often positioned as a hedge against monetary expansion.")
 
-    
-    # User input for prediction
-    st.subheader("Make a Prediction")
+        
+        # User input for prediction
+        st.subheader("Make a Prediction")
+        
+        # Create input sliders for each feature
+        feature_values = []
+        
+        # Make sure to use the actual column names from your dataset
+        for feature in selected_features:  # Use the features that were selected for training
+            min_val = float(clean_df[feature].min())
+            max_val = float(clean_df[feature].max())
+            current_val = float(clean_df[feature].median())
+            
+            feature_val = st.slider(
+                f'{feature}',
+                min_value=min_val,
+                max_value=max_val,
+                value=current_val,
+                step=(max_val - min_val) / 100,
+                key=f"slider_{feature}"
+            )
+            feature_values.append(feature_val)
 
-    selected_features = ["inflation", "fed_funds_rate", "sp500", "gold_price_usd", "us_m2_money_supply_in_billions"]
-    
-    # Create input sliders for each feature
-    feature_values = []
-
-    for feature in selected_features:
-        min_val = float(clean_df[feature].min())
-        max_val = float(clean_df[feature].max())
-        current_val = float(clean_df[feature].median())
-    
-        feature_val = st.slider(
-            f'{feature}',
-            min_value=min_val,
-            max_value=max_val,
-            value=current_val,
-            step=(max_val - min_val) / 100,
-            key=f"slider_{feature}"
-        )
-        feature_values.append(feature_val)
-
-    # Predict button
-    if st.button("Predict BTC Price"):
-        prediction = make_prediction(model, feature_values)
-    
-        if prediction is not None:
-            st.success(f'Estimated BTC price: ${prediction:,.2f}')
-                
-    
-    # Add disclaimer
-    st.info("Disclaimer: This tool is for educational purposes only. Cryptocurrency investments carry significant risk.")
-
-if __name__ == '__main__':
-    main()
+        # Predict button
+        if st.button("Predict BTC Price"):
+            prediction = make_prediction(model, feature_values)
+            
+            if prediction is not None:
+                st.success(f'Estimated BTC price: ${prediction:,.2f}')
+        
+        # Add disclaimer
+        st.info("Disclaimer: This tool is for educational purposes only. Cryptocurrency investments carry significant risk.")
