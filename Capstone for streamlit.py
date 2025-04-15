@@ -157,6 +157,7 @@ def main():
         st.subheader("Model Information")
         st.write(f"Model R-squared: {r_squared:.4f}")
         st.write(f"RMSE (Root Mean Square Error): ${rmse:,.2f}")
+        st.write("RMSE of 7,929.99 indicates the average prediction error in USD for Bitcoin price. R² of 0.872 is quite strong, suggesting the model explains about 87.2% of the variability in Bitcoin prices")
         
         coef_df = pd.DataFrame({
             'Feature': selected_features,
