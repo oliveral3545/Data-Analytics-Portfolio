@@ -101,4 +101,43 @@ def make_prediction(model, feature_values):
 
 def main():
     st.title('BTC Price Predictor Against Macro Conditions')
-    st.write("""This model demonstrates how Bitcoin's price dynamics
+    st.write("""This model demonstrates how Bitcoin's price dynamics have evolved beyond the traditional 4-year cycle narrative in 2025. It highlights the increasing influence of macroeconomic factors on BTC's valuation. Use the sliders to explore various economic scenarios—from highly favorable to challenging conditions—and observe their significant impact on Bitcoin's predicted price movement.""")
+
+        # User input for prediction
+    st.subheader("Make a Prediction")
+
+    selected_features = ["inflation", "fed_funds_rate", "sp500", "gold_price_usd", "us_m2_money_supply_in_billions"]
+    
+    # Create input sliders for each feature
+    feature_values = []
+
+    for feature in selected_features:
+        min_val = float(clean_df[feature].min())
+        max_val = float(clean_df[feature].max())
+        current_val = float(clean_df[feature].median())
+    
+        feature_val = st.slider(
+            f'{feature}',
+            min_value=min_val,
+            max_value=max_val,
+            value=current_val,
+            step=(max_val - min_val) / 100,
+            key=f"slider_{feature}"
+        )
+        feature_values.append(feature_val)
+
+    # Predict button
+    if st.button("Predict BTC Price"):
+        prediction = make_prediction(model, feature_values)
+    
+        if prediction is not None:
+            st.success(f'Estimated BTC price: ${prediction:,.2f}')
+                
+    
+    # Add disclaimer
+    st.info("Disclaimer: This tool is for educational purposes only. Cryptocurrency investments carry significant risk.")
+
+if __name__ == '__main__':
+    main()
+
+
