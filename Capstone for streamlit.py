@@ -9,6 +9,8 @@ import warnings
 # Suppress warnings
 warnings.filterwarnings('ignore')
 
+st.set_page_config(page_title="BTC-Price-Predictor-Against-Macro-Conditions")
+
 # Function to load data
 def load_data():
     # Replace with your actual data loading logic
@@ -99,7 +101,6 @@ def make_prediction(model, feature_values):
         st.error(f"Error making prediction: {e}")
         return None
 
-st.set_page_config(page_title="BTC-Price-Predictor-Against-Macro-Conditions")
 
 def main():
     st.title('BTC Price Predictor Against Macro Conditions')
@@ -195,19 +196,6 @@ def main():
         if prediction is not None:
             st.success(f'Estimated BTC price: ${prediction:,.2f}')
                 
-    # Add a correlation matrix for selected features
-    if len(selected_features) > 1:
-        st.subheader("Feature Correlation Matrix")
-        corr_matrix = clean_df[selected_features + ['btc_price_usd']].corr().round(2) 
-        
-        fig_corr = px.imshow(
-            corr_matrix,
-            text_auto='.2f',  
-            aspect="auto",
-            title="Correlation Matrix",
-            color_continuous_scale='RdBu_r'
-        )
-        st.plotly_chart(fig_corr)
     
     # Add disclaimer
     st.info("Disclaimer: This tool is for educational purposes only. Cryptocurrency investments carry significant risk.")
