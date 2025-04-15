@@ -103,7 +103,7 @@ def main():
     st.title('BTC Price Predictor Against Macro Conditions')
     st.write("""This model demonstrates how Bitcoin's price dynamics have evolved beyond the traditional 4-year cycle narrative in 2025. 
     It highlights the increasing influence of macroeconomic factors on BTC's valuation. Use the sliders to explore various economic scenarios—from 
-    highly favorable to challenging conditions—and observe their significant impact on Bitcoin's predicted price movement""")
+    highly favorable to challenging conditions—and observe their significant impact on Bitcoin's predicted price movement.""")
     
     # Load data
     btc_macro_df = load_data()
@@ -111,10 +111,7 @@ def main():
     if btc_macro_df is None or btc_macro_df.empty:
         st.error("Failed to load data. Please check your data source.")
         return
-    
-    # Debug: Show the columns in the loaded dataframe
-    st.write("Available columns in loaded data:", btc_macro_df.columns.tolist())
-    
+            
     # Define the specific macro features to use
     macro_features = [
         'gold_price_usd',
