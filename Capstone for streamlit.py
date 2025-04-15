@@ -102,7 +102,9 @@ def make_prediction(model, feature_values):
 
 def main():
     st.title('BTC Price Predictor Against Macro Conditions')
-    st.write("Explore how macroeconomic factors affect Bitcoin's price")
+    st.write("This model demonstrates how Bitcoin's price dynamics have evolved beyond the traditional 4-year cycle narrative in 2025. 
+    It highlights the increasing influence of macroeconomic factors on BTC's valuation. Use the sliders to explore various economic scenarios—from 
+    highly favorable to challenging conditions—and observe their significant impact on Bitcoin's predicted price movement")
     
     # Load data
     btc_macro_df = load_data()
@@ -145,8 +147,7 @@ def main():
         st.error("Please select at least one feature for prediction.")
         return
     
-    # Remove basic data statistics completely
-    
+
     # Train model with selected features
     model, r_squared, rmse, clean_df = train_model(btc_macro_df, selected_features)
     
@@ -165,6 +166,34 @@ def main():
     })
     st.write("Feature Coefficients:")
     st.dataframe(coef_df)
+
+import streamlit as st
+
+# Title for the feature importance section
+st.subheader("Feature Importance:")
+
+# Create expandable sections for each feature
+with st.container():
+    st.markdown("**1. Inflation (coefficient: 541.73):**")
+    st.write("For each percentage point increase in inflation, Bitcoin price is estimated to increase by $541.73, on average. This supports the narrative that Bitcoin serves as an inflation hedge - when fiat currencies lose purchasing power, Bitcoin tends to gain value.")
+    
+    st.markdown("**2. Fed funds rate (coefficient: -3,393.99):**")
+    st.write("This large negative coefficient indicates that for each percentage point increase in the Fed funds rate, Bitcoin price is estimated to decrease by approximately $3,394. This relationship makes economic sense as higher interest rates:")
+    st.markdown("""
+    - Make yield-generating assets more attractive compared to non-yielding Bitcoin
+    - Reduce liquidity in the financial system
+    - Typically suppress risk appetite in markets
+    """)
+    
+    st.markdown("**3. S&P 500 (coefficient: 27.39):**")
+    st.write("For each point increase in the S&P 500 index, Bitcoin price tends to increase by about $27.39. This positive correlation suggests Bitcoin still behaves partially as a risk asset that rises with broader market optimism.")
+    
+    st.markdown("**4. Gold price (coefficient: 4.99):**")
+    st.write("For each dollar increase in gold's price, Bitcoin price tends to increase by $4.99. This modest positive relationship suggests some connection between the two assets, supporting the \"digital gold\" narrative, but the effect is relatively small.")
+    
+    st.markdown("**5. M2 money supply (coefficient: -2.71):**")
+    st.write("For each billion dollar increase in M2 money supply, Bitcoin price tends to decrease by $2.71. This slight negative relationship is counterintuitive since Bitcoin is often positioned as a hedge against monetary expansion.")
+
     
     # User input for prediction
     st.subheader("Make a Prediction")
