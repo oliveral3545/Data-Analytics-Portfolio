@@ -185,7 +185,7 @@ def main():
             st.write("For each dollar increase in gold's price, Bitcoin price tends to increase by $4.99. This modest positive relationship suggests some connection between the two assets, supporting the \"digital gold\" narrative, but the effect is relatively small.")
     
             st.markdown("**5. M2 money supply (coefficient: -2.71):**")
-            st.write("For each billion dollar increase in M2 money supply, Bitcoin price tends to decrease by $2.71. This slight negative relationship is counterintuitive since Bitcoin is often positioned as a hedge against monetary expansion.There might be lag effects not captured in the current model")
+            st.write("For each billion dollar increase in M2 money supply, Bitcoin price tends to decrease by $2.71. This slight negative relationship is counterintuitive since Bitcoin is often positioned as a hedge against monetary expansion. There might be lag effects not captured in the current model.")
 
         
         # User input for prediction
