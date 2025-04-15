@@ -108,23 +108,40 @@ def main():
 
     selected_features = ["inflation", "fed_funds_rate", "sp500", "gold_price_usd", "us_m2_money_supply_in_billions"]
     
+    # User input for prediction
+    st.subheader("Make a Prediction")
+    
     # Create input sliders for each feature
     feature_values = []
-
-    for feature in selected_features:
-        min_val = float(clean_df[feature].min())
-        max_val = float(clean_df[feature].max())
-        current_val = float(clean_df[feature].median())
     
-        feature_val = st.slider(
-            f'{feature}',
-            min_value=min_val,
-            max_value=max_val,
-            value=current_val,
-            step=(max_val - min_val) / 100,
-            key=f"slider_{feature}"
-        )
-        feature_values.append(feature_val)
+    # Add debugging information
+    if clean_df is None:
+        st.error("Dataset is not available. Please check your data source.")
+        return
+    
+    # Make sure to use the actual column names from your dataset
+    for feature in selected_features:
+        try:
+            # Check if feature exists in the dataframe
+            if feature not in clean_df.columns:
+                st.error(f"Feature '{feature}' not found in dataset. Available columns: {', '.join(clean_df.columns)}")
+                continue
+                
+            min_val = float(clean_df[feature].min())
+            max_val = float(clean_df[feature].max())
+            current_val = float(clean_df[feature].median())
+            
+            feature_val = st.slider(
+                f'{feature}',
+                min_value=min_val,
+                max_value=max_val,
+                value=current_val,
+                step=(max_val - min_val) / 100,
+                key=f"slider_{feature}"
+            )
+            feature_values.append(feature_val)
+        except Exception as e:
+            st.error(f"Error creating slider for feature '{feature}': {e}")
 
     # Predict button
     if st.button("Predict BTC Price"):
