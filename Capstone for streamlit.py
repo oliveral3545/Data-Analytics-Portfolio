@@ -101,32 +101,84 @@ def make_prediction(model, feature_values):
 
 def main():
     st.title('BTC Price Predictor Against Macro Conditions')
-    st.write("""This model demonstrates how Bitcoin's price dynamics have evolved beyond the traditional 4-year cycle narrative in 2025. It highlights the increasing influence of macroeconomic factors on BTC's valuation. Use the sliders to explore various economic scenarios—from highly favorable to challenging conditions—and observe their significant impact on Bitcoin's predicted price movement.""")
-
-        # User input for prediction
-    st.subheader("Make a Prediction")
-
-    selected_features = ["inflation", "fed_funds_rate", "sp500", "gold_price_usd", "us_m2_money_supply_in_billions"]
+    st.write("""This model demonstrates how Bitcoin's price dynamics have evolved beyond the traditional 4-year cycle narrative in 2025. 
+    It highlights the increasing influence of macroeconomic factors on BTC's valuation. Use the sliders to explore various economic scenarios—from 
+    highly favorable to challenging conditions—and observe their significant impact on Bitcoin's predicted price movement""")
     
-    # User input for prediction
-    st.subheader("Make a Prediction")
+    # Load data
+    btc_macro_df = load_data()
     
-    # Create input sliders for each feature
-    feature_values = []
-    
-    # Add debugging information
-    if clean_df is None:
-        st.error("Dataset is not available. Please check your data source.")
+    if btc_macro_df is None or btc_macro_df.empty:
+        st.error("Failed to load data. Please check your data source.")
         return
     
-    # Make sure to use the actual column names from your dataset
-    for feature in selected_features:
-        try:
-            # Check if feature exists in the dataframe
-            if feature not in clean_df.columns:
-                st.error(f"Feature '{feature}' not found in dataset. Available columns: {', '.join(clean_df.columns)}")
-                continue
-                
+    # Debug: Show the columns in the loaded dataframe
+    st.write("Available columns in loaded data:", btc_macro_df.columns.tolist())
+    
+    # Define the specific macro features to use
+    macro_features = [
+        'gold_price_usd',
+        'SP500',
+        'fed_funds_rate',
+        'US_inflation',
+        'US_M2_money_supply_in_billions'
+    ]
+
+    # Verify which features are available in the dataset
+    available_features = [feat for feat in macro_features if feat in btc_macro_df.columns]
+    
+    if not available_features:
+        st.error("None of the required macro features are in the dataset.")
+        # Show available columns
+        st.write("Available columns:", ", ".join(btc_macro_df.columns.tolist()))
+        return
+    
+    # Sidebar for model configuration
+    st.sidebar.header("Model Configuration")
+    
+    # Let user select features to include
+    st.sidebar.subheader("Select Features to Include")
+    selected_features = []
+    
+    for feature in available_features:
+        if st.sidebar.checkbox(feature, value=True, key=f"feature_{feature}"):
+            selected_features.append(feature)
+    
+    if not selected_features:
+        st.error("Please select at least one feature for prediction.")
+        return
+    
+    # Train model with selected features
+    try:
+        model, r_squared, rmse, clean_df = train_model(btc_macro_df, selected_features)
+        
+        if model is None or clean_df is None or clean_df.empty:
+            st.error("Could not train model. Please check your data.")
+            return
+        
+        # Display model info
+        st.subheader("Model Information")
+        st.write(f"Model R-squared: {r_squared:.4f}")
+        st.write(f"RMSE (Root Mean Square Error): ${rmse:,.2f}")
+        
+        coef_df = pd.DataFrame({
+            'Feature': selected_features,
+            'Coefficient': model.coef_
+        })
+        st.write("Feature Coefficients:")
+        st.dataframe(coef_df)
+
+        # Title for the feature importance section
+        st.subheader("Feature Importance:")
+        
+        # User input for prediction
+        st.subheader("Make a Prediction")
+        
+        # Create input sliders for each feature
+        feature_values = []
+        
+        # Make sure to use the actual column names from your dataset
+        for feature in selected_features:  # Use the features that were selected for training
             min_val = float(clean_df[feature].min())
             max_val = float(clean_df[feature].max())
             current_val = float(clean_df[feature].median())
@@ -140,19 +192,21 @@ def main():
                 key=f"slider_{feature}"
             )
             feature_values.append(feature_val)
-        except Exception as e:
-            st.error(f"Error creating slider for feature '{feature}': {e}")
 
-    # Predict button
-    if st.button("Predict BTC Price"):
-        prediction = make_prediction(model, feature_values)
+        # Predict button
+        if st.button("Predict BTC Price"):
+            prediction = make_prediction(model, feature_values)
+            
+            if prediction is not None:
+                st.success(f'Estimated BTC price: ${prediction:,.2f}')
+        
+        # Add disclaimer
+        st.info("Disclaimer: This tool is for educational purposes only. Cryptocurrency investments carry significant risk.")
     
-        if prediction is not None:
-            st.success(f'Estimated BTC price: ${prediction:,.2f}')
-                
-    
-    # Add disclaimer
-    st.info("Disclaimer: This tool is for educational purposes only. Cryptocurrency investments carry significant risk.")
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+        import traceback
+        st.error(traceback.format_exc())
 
 if __name__ == '__main__':
     main()
