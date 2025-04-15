@@ -197,6 +197,8 @@ with st.container():
     
     # User input for prediction
     st.subheader("Make a Prediction")
+
+    selected_features = ["inflation", "fed_funds_rate", "sp500", "gold_price_usd", "us_m2_money_supply_in_billions"]
     
     # Create input sliders for each feature
     feature_values = []
