@@ -102,8 +102,9 @@ def make_prediction(model, feature_values):
 def main():
     st.title('BTC Price Predictor Against Macro Conditions')
     st.write("""This model demonstrates how Bitcoin's price dynamics have evolved beyond the traditional 4-year cycle narrative in 2025. 
-    It highlights the increasing influence of macroeconomic factors on BTC's valuation. Use the sliders to explore various economic scenarios—from 
-    highly favorable to challenging conditions—and observe their significant impact on Bitcoin's predicted price movement. Contains data from Mar-2015 to Mar-2025.""")
+    It highlights the increasing influence of macroeconomic factors on BTC's valuation.""")
+    st.write("""Use the sliders to explore various economic scenarios—from highly favorable to challenging conditions—and observe their significant impact on Bitcoin's predicted price movement.""")
+    st.write("""Contains data from Mar-2015 to Mar-2025.""")
     
     # Load data
     btc_macro_df = load_data()
