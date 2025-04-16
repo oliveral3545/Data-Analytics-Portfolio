@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 import warnings
 import traceback
 
-# Suppress warnings
+""" Suppress warnings """
 warnings.filterwarnings('ignore')
 
 # Function to load data
