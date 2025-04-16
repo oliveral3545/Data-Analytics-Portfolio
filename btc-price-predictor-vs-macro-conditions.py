@@ -4,7 +4,9 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
 import warnings
+import traceback
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
@@ -63,7 +65,6 @@ def train_model(df, feature_cols, random_state=123):
     
     try:
         # Split data into training and testing sets
-        from sklearn.model_selection import train_test_split
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=random_state)
         
         # Train model
@@ -224,7 +225,6 @@ def main():
     
     except Exception as e:
         st.error(f"An error occurred: {e}")
-        import traceback
         st.error(traceback.format_exc())
 
 if __name__ == '__main__':
