@@ -7,7 +7,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 import warnings
 import traceback
-# Import all functions from utils
+"""Import all functions from utils""" 
 from utils import load_data, preprocess_data, train_model, make_prediction
 
 def main():
@@ -17,14 +17,14 @@ def main():
     st.write("""Use the sliders to explore various economic scenarios—from highly favorable to challenging conditions—and observe their significant impact on Bitcoin's predicted price movement.""")
     st.write("""Contains data from Mar-2015 to Mar-2025.""")
     
-    # Load data
+    """Load data""" 
     btc_macro_df = load_data()
     
     if btc_macro_df is None or btc_macro_df.empty:
         st.error("Failed to load data. Please check your data source.")
         return
             
-    # Define the specific macro features to use
+    """Define the specific macro features to use""" 
     macro_features = [
         'gold_price_usd',
         'SP500',
@@ -33,19 +33,19 @@ def main():
         'US_M2_money_supply_in_billions'
     ]
 
-    # Verify which features are available in the dataset
+    """ Verify which features are available in the dataset""" 
     available_features = [feat for feat in macro_features if feat in btc_macro_df.columns]
     
     if not available_features:
         st.error("None of the required macro features are in the dataset.")
-        # Show available columns
+        """Show available columns""" 
         st.write("Available columns:", ", ".join(btc_macro_df.columns.tolist()))
         return
     
-    # Sidebar for model configuration
+    """Sidebar for model configuration""" 
     st.sidebar.header("Model Configuration")
     
-    # Let user select features to include
+    """Let user select features to include""" 
     st.sidebar.subheader("Select Features to Include")
     selected_features = []
     
@@ -57,7 +57,7 @@ def main():
         st.error("Please select at least one feature for prediction.")
         return
     
-    # Train model with selected features
+    """ Train model with selected features""" 
     try:
         model, r_squared, rmse, clean_df = train_model(btc_macro_df, selected_features)
         
@@ -65,13 +65,13 @@ def main():
             st.error("Could not train model. Please check your data.")
             return
 
-        # User input for prediction
+        """ User input for prediction""" 
         st.subheader("Make a Prediction")
         
-        # Create input sliders for each feature
+        """ Create input sliders for each feature""" 
         feature_values = []
         
-        # Make sure to use the actual column names from your dataset
+        """ Make sure to use the actual column names from your dataset""" 
         for feature in selected_features:  # Use the features that were selected for training
             min_val = float(clean_df[feature].min())
             max_val = float(clean_df[feature].max())
@@ -87,14 +87,14 @@ def main():
             )
             feature_values.append(feature_val)
 
-        # Predict button
+        """ Predict button""" 
         if st.button("Predict BTC Price"):
             prediction = make_prediction(model, feature_values)
             
             if prediction is not None:
                 st.success(f'Estimated BTC price: ${prediction:,.2f}')
         
-        # Display model info
+        """Display model info""" 
         st.subheader("Model Information")
         st.write(f"Model R-squared: {r_squared:.4f}")
         st.write(f"RMSE (Root Mean Square Error): ${rmse:,.2f}")
@@ -108,7 +108,7 @@ def main():
         st.write("Feature Coefficients:")
         st.dataframe(coef_df)
 
-        # Create expandable sections for each feature
+        """Create expandable sections for each feature""" 
         with st.container():
             st.markdown("**1. Inflation (coefficient: 541.73):**")
             st.write("For each percentage point increase in inflation, Bitcoin price is estimated to increase by $541.73, on average. This supports the narrative that Bitcoin serves as an inflation hedge - when fiat currencies lose purchasing power, Bitcoin tends to gain value.")
@@ -130,7 +130,7 @@ def main():
             st.markdown("**5. M2 money supply (coefficient: -2.71):**")
             st.write("For each billion dollar increase in M2 money supply, Bitcoin price tends to decrease by $2.71. This slight negative relationship is counterintuitive since Bitcoin is often positioned as a hedge against monetary expansion. There might be lag effects not captured in the current model.")
                         
-        # Add disclaimer
+        """ Add disclaimer""" 
         st.info("Disclaimer: This tool is for educational purposes only. Cryptocurrency investments carry significant risk.")
     
     except Exception as e:
