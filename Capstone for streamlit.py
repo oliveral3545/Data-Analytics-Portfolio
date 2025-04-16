@@ -187,8 +187,8 @@ def main():
         st.subheader("Model Information")
         st.write(f"Model R-squared: {r_squared:.4f}")
         st.write(f"RMSE (Root Mean Square Error): ${rmse:,.2f}")
-        st.write("RMSE of 7,929.99 suggest that on average, your model's predictions differ from the actual Bitcoin price by about $7,929.")
         st.write("R² of 0.872 is quite strong, which means that the model accounts for approximately 87.2% of the fluctuations in Bitcoin prices.")
+        st.write("RMSE of 7,929.99 suggest that on average, the model's predictions differ from the actual Bitcoin price by about $7,929.")
         
         coef_df = pd.DataFrame({
             'Feature': selected_features,
